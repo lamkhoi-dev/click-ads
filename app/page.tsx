@@ -17,7 +17,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Track click count - resets on every page load
+  // Track click count - persisted in localStorage
+  // Resets only when video was already unlocked (all clicks completed)
   const [clickCount, setClickCount] = useState(0);
 
   useEffect(() => {
@@ -28,6 +29,20 @@ export default function HomePage() {
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
+
+    // Load click count from localStorage
+    const saved = localStorage.getItem('videoClickCount');
+    const mobile = window.innerWidth <= 768;
+    if (saved) {
+      const count = parseInt(saved);
+      // If video was already unlocked (mobile: >=2, PC: >=1), reset to 0
+      if ((mobile && count >= 2) || (!mobile && count >= 1)) {
+        localStorage.setItem('videoClickCount', '0');
+        setClickCount(0);
+      } else {
+        setClickCount(count);
+      }
+    }
 
     // Fetch content
     fetchContent();
@@ -58,10 +73,12 @@ export default function HomePage() {
         // First click -> redirect to TikTok
         window.open(content.tiktokLink, '_blank');
         setClickCount(1);
+        localStorage.setItem('videoClickCount', '1');
       } else if (clickCount === 1) {
         // Second click -> redirect to Shopee
         window.open(content.shopeeLink, '_blank');
         setClickCount(2);
+        localStorage.setItem('videoClickCount', '2');
       } else {
         // Third click and beyond -> Allow video to play (do nothing, remove overlay)
         // The overlay will not show anymore
@@ -72,6 +89,7 @@ export default function HomePage() {
         // First click -> redirect to TikTok
         window.open(content.tiktokLink, '_blank');
         setClickCount(1);
+        localStorage.setItem('videoClickCount', '1');
       } else {
         // Second click and beyond -> Allow video to play
         // The overlay will not show anymore
