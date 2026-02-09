@@ -23,6 +23,8 @@ export default function AdminPage() {
 
   const [uploadingVideo1, setUploadingVideo1] = useState(false);
   const [uploadingVideo2, setUploadingVideo2] = useState(false);
+  const [uploadProgress1, setUploadProgress1] = useState(0);
+  const [uploadProgress2, setUploadProgress2] = useState(0);
 
   useEffect(() => {
     // Check if already logged in
@@ -81,33 +83,62 @@ export default function AdminPage() {
 
   const handleVideoUpload = async (file: File, videoNumber: 1 | 2) => {
     const setUploading = videoNumber === 1 ? setUploadingVideo1 : setUploadingVideo2;
+    const setProgress = videoNumber === 1 ? setUploadProgress1 : setUploadProgress2;
     setUploading(true);
+    setProgress(0);
 
     try {
+      // Get signature from our API
+      const sigRes = await fetch('/api/upload/sign');
+      const sigData = await sigRes.json();
+
+      if (!sigRes.ok) {
+        alert(sigData.error || 'Failed to get upload signature');
+        return;
+      }
+
+      // Upload directly to Cloudinary from browser (bypasses Vercel 4.5MB limit)
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('api_key', sigData.apiKey);
+      formData.append('timestamp', sigData.timestamp);
+      formData.append('signature', sigData.signature);
+      formData.append('folder', 'click-ads');
 
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
+      const xhr = new XMLHttpRequest();
+      
+      await new Promise<void>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', (e) => {
+          if (e.lengthComputable) {
+            const percent = Math.round((e.loaded / e.total) * 100);
+            setProgress(percent);
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const result = JSON.parse(xhr.responseText);
+            if (videoNumber === 1) {
+              setContent(prev => ({ ...prev, video1Url: result.secure_url }));
+            } else {
+              setContent(prev => ({ ...prev, video2Url: result.secure_url }));
+            }
+            alert('Video uploaded successfully!');
+            resolve();
+          } else {
+            reject(new Error('Upload failed'));
+          }
+        });
+
+        xhr.addEventListener('error', () => reject(new Error('Upload error')));
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${sigData.cloudName}/video/upload`);
+        xhr.send(formData);
       });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        if (videoNumber === 1) {
-          setContent({ ...content, video1Url: data.url });
-        } else {
-          setContent({ ...content, video2Url: data.url });
-        }
-        alert('Video uploaded successfully!');
-      } else {
-        alert(data.error || 'Upload failed');
-      }
     } catch (err) {
-      alert('Upload error');
+      alert('Upload error: ' + (err instanceof Error ? err.message : 'Unknown error'));
     } finally {
       setUploading(false);
+      setProgress(0);
     }
   };
 
@@ -241,7 +272,14 @@ export default function AdminPage() {
                 disabled={uploadingVideo1}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
               />
-              {uploadingVideo1 && <p className="text-sm text-blue-600 mt-2">Uploading...</p>}
+              {uploadingVideo1 && (
+                <div className="mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="bg-blue-600 h-3 rounded-full transition-all" style={{ width: `${uploadProgress1}%` }}></div>
+                  </div>
+                  <p className="text-sm text-blue-600 mt-1">Uploading... {uploadProgress1}%</p>
+                </div>
+              )}
               {content.video1Url && (
                 <p className="text-sm text-green-600 mt-2">✓ Video uploaded: {content.video1Url.substring(0, 50)}...</p>
               )}
@@ -261,7 +299,14 @@ export default function AdminPage() {
                 disabled={uploadingVideo2}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
               />
-              {uploadingVideo2 && <p className="text-sm text-blue-600 mt-2">Uploading...</p>}
+              {uploadingVideo2 && (
+                <div className="mt-2">
+                  <div className="w-full bg-gray-200 rounded-full h-3">
+                    <div className="bg-blue-600 h-3 rounded-full transition-all" style={{ width: `${uploadProgress2}%` }}></div>
+                  </div>
+                  <p className="text-sm text-blue-600 mt-1">Uploading... {uploadProgress2}%</p>
+                </div>
+              )}
               {content.video2Url && (
                 <p className="text-sm text-green-600 mt-2">✓ Video uploaded: {content.video2Url.substring(0, 50)}...</p>
               )}
