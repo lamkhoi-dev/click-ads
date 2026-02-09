@@ -17,7 +17,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Track click count - stored in localStorage
+  // Track click count - resets on every page load
   const [clickCount, setClickCount] = useState(0);
 
   useEffect(() => {
@@ -28,12 +28,6 @@ export default function HomePage() {
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
-
-    // Get click count from localStorage
-    const savedClickCount = localStorage.getItem('videoClickCount');
-    if (savedClickCount) {
-      setClickCount(parseInt(savedClickCount));
-    }
 
     // Fetch content
     fetchContent();
@@ -63,15 +57,11 @@ export default function HomePage() {
       if (clickCount === 0) {
         // First click -> redirect to TikTok
         window.open(content.tiktokLink, '_blank');
-        const newCount = 1;
-        setClickCount(newCount);
-        localStorage.setItem('videoClickCount', newCount.toString());
+        setClickCount(1);
       } else if (clickCount === 1) {
         // Second click -> redirect to Shopee
         window.open(content.shopeeLink, '_blank');
-        const newCount = 2;
-        setClickCount(newCount);
-        localStorage.setItem('videoClickCount', newCount.toString());
+        setClickCount(2);
       } else {
         // Third click and beyond -> Allow video to play (do nothing, remove overlay)
         // The overlay will not show anymore
@@ -81,9 +71,7 @@ export default function HomePage() {
       if (clickCount === 0) {
         // First click -> redirect to TikTok
         window.open(content.tiktokLink, '_blank');
-        const newCount = 1;
-        setClickCount(newCount);
-        localStorage.setItem('videoClickCount', newCount.toString());
+        setClickCount(1);
       } else {
         // Second click and beyond -> Allow video to play
         // The overlay will not show anymore
@@ -100,14 +88,7 @@ export default function HomePage() {
   };
 
   const getButtonText = () => {
-    if (isMobile) {
-      if (clickCount === 0) return 'Click để xem video (1/3)';
-      if (clickCount === 1) return 'Click để xem video (2/3)';
-      return 'Xem video';
-    } else {
-      if (clickCount === 0) return 'Click để xem video (1/2)';
-      return 'Xem video';
-    }
+    return 'Click để xem video';
   };
 
   if (loading) {
@@ -145,8 +126,8 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Videos Section */}
-          <div className="grid md:grid-cols-2 gap-6">
+          {/* Videos Section - Vertical Layout */}
+          <div className="flex flex-col gap-6">
             {/* Video 1 */}
             <div className="relative">
               <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
@@ -196,27 +177,6 @@ export default function HomePage() {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Debug info (remove in production) */}
-          <div className="mt-8 p-4 bg-gray-100 rounded-lg text-sm text-gray-600">
-            <p>Device: {isMobile ? 'Mobile' : 'PC'}</p>
-            <p>Click count: {clickCount}</p>
-            <p>Next action: {
-              isMobile 
-                ? (clickCount === 0 ? 'Redirect to TikTok' : clickCount === 1 ? 'Redirect to Shopee' : 'Play video')
-                : (clickCount === 0 ? 'Redirect to TikTok' : 'Play video')
-            }</p>
-            <button
-              onClick={() => {
-                localStorage.removeItem('videoClickCount');
-                setClickCount(0);
-                alert('Click count reset!');
-              }}
-              className="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-            >
-              Reset Click Count (for testing)
-            </button>
           </div>
         </div>
       </div>
