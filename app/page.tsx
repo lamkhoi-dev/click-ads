@@ -32,23 +32,20 @@ export default function HomePage() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
 
-    // Detect Facebook/Instagram/Zalo/Line in-app browsers (mobile only)
+    // Detect Facebook/Instagram/Zalo/Line in-app browsers (Android only)
+    // iOS can use the built-in browser
     const ua = navigator.userAgent || '';
-    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
-    const inApp = isMobileDevice && /FBAN|FBAV|FB_IAB|Instagram|Line\/|Zalo/i.test(ua);
+    const isAndroid = /Android/i.test(ua);
+    const inApp = isAndroid && /FBAN|FBAV|FB_IAB|Instagram|Line\/|Zalo/i.test(ua);
     setIsInAppBrowser(inApp);
     setIsIOS(/iPhone|iPad|iPod/i.test(ua));
 
-    // If in-app browser detected on Android, try to auto-open in external browser
+    // If Android in-app browser detected, try to auto-open in external browser
     if (inApp) {
-      const isAndroid = /Android/i.test(ua);
-      if (isAndroid) {
-        // Android: use intent scheme to open in Chrome/default browser
-        const currentUrl = window.location.href;
-        const intentUrl = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
-        window.location.href = intentUrl;
-      }
-      // iOS: don't auto-redirect, show the escape screen with button instead
+      // Android: use intent scheme to open in Chrome/default browser
+      const currentUrl = window.location.href;
+      const intentUrl = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
+      window.location.href = intentUrl;
     }
 
     // Restore click count from localStorage
