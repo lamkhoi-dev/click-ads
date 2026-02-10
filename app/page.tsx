@@ -21,6 +21,8 @@ export default function HomePage() {
   // reload keeps count, new tab/close tab resets
   const [clickCount, setClickCount] = useState(0);
   const [isInAppBrowser, setIsInAppBrowser] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
     // Detect mobile
@@ -33,7 +35,20 @@ export default function HomePage() {
 
     // Detect Facebook/Instagram/Zalo/Line in-app browsers
     const ua = navigator.userAgent || '';
-    setIsInAppBrowser(/FBAN|FBAV|FB_IAB|Instagram|Line\/|Zalo/i.test(ua));
+    const inApp = /FBAN|FBAV|FB_IAB|Instagram|Line\/|Zalo/i.test(ua);
+    setIsInAppBrowser(inApp);
+    setIsIOS(/iPhone|iPad|iPod/i.test(ua));
+
+    // If in-app browser detected, try to auto-open in external browser (Android)
+    if (inApp) {
+      const isAndroid = /Android/i.test(ua);
+      if (isAndroid) {
+        // Android: use intent scheme to open in Chrome/default browser
+        const currentUrl = window.location.href;
+        const intentUrl = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
+        window.location.href = intentUrl;
+      }
+    }
 
     // Restore click count from sessionStorage (per-tab)
     const saved = sessionStorage.getItem('videoClickCount');
@@ -61,17 +76,10 @@ export default function HomePage() {
     }
   };
 
-  // Open link - bypasses Facebook/Instagram in-app browser restrictions
+  // Open link in new tab (always external browser at this point)
   const openLink = (type: 'tiktok' | 'shopee') => {
-    if (isInAppBrowser) {
-      // In-app browser: navigate to same-domain redirect page
-      // This bypasses the "trying to open another app" warning
-      window.location.href = `/api/go?type=${type}`;
-    } else {
-      // Normal browser: open in new tab
-      const url = type === 'tiktok' ? content!.tiktokLink : content!.shopeeLink;
-      window.open(url, '_blank');
-    }
+    const url = type === 'tiktok' ? content!.tiktokLink : content!.shopeeLink;
+    window.open(url, '_blank');
   };
 
   const handleVideoClick = () => {
@@ -126,6 +134,96 @@ export default function HomePage() {
           <a href="/admin" className="text-blue-600 hover:underline">
             Đi tới trang Admin
           </a>
+        </div>
+      </div>
+    );
+  }
+
+  // Show in-app browser escape screen (iOS only - Android auto-redirects via intent)
+  if (isInAppBrowser) {
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : '';
+
+    const handleCopyLink = () => {
+      navigator.clipboard.writeText(currentUrl).then(() => {
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      }).catch(() => {
+        // Fallback for older browsers
+        const input = document.createElement('input');
+        input.value = currentUrl;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        setLinkCopied(true);
+        setTimeout(() => setLinkCopied(false), 2000);
+      });
+    };
+
+    const handleOpenExternal = () => {
+      // Try multiple methods to escape in-app browser
+      const ua = navigator.userAgent || '';
+      
+      if (/Android/i.test(ua)) {
+        // Android intent - open in Chrome
+        const intentUrl = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
+        window.location.href = intentUrl;
+      } else {
+        // iOS: try x-safari scheme, fallback to googlechrome
+        // x-safari doesn't work reliably, so we try googlechrome first
+        const safariUrl = currentUrl.replace('https://', 'x-safari-https://');
+        window.location.href = safariUrl;
+        
+        // Fallback: after 500ms if still here, try Google Chrome
+        setTimeout(() => {
+          const chromeUrl = currentUrl.replace('https://', 'googlechromes://');
+          window.location.href = chromeUrl;
+        }, 500);
+      }
+    };
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
+          <div className="text-6xl mb-4">🔒</div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-3">
+            Mở bằng trình duyệt
+          </h1>
+          <p className="text-gray-600 mb-6">
+            Để xem video, vui lòng mở trang này bằng trình duyệt bên ngoài (Chrome, Safari...)
+          </p>
+
+          {/* Auto open button */}
+          <button
+            onClick={handleOpenExternal}
+            className="w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-xl hover:bg-blue-700 transition-colors mb-3 text-lg"
+          >
+            🌐 Mở trình duyệt
+          </button>
+
+          {/* Copy link button */}
+          <button
+            onClick={handleCopyLink}
+            className="w-full bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200 transition-colors mb-6"
+          >
+            {linkCopied ? '✅ Đã copy link!' : '📋 Copy link'}
+          </button>
+
+          {/* Manual instructions */}
+          <div className="border-t pt-4">
+            <p className="text-sm text-gray-500 mb-3 font-medium">Hoặc làm thủ công:</p>
+            {isIOS ? (
+              <div className="text-left text-sm text-gray-600 space-y-2">
+                <p>1. Nhấn nút <span className="font-bold">⋯</span> (góc dưới phải)</p>
+                <p>2. Chọn <span className="font-bold">&quot;Mở bằng Safari&quot;</span></p>
+              </div>
+            ) : (
+              <div className="text-left text-sm text-gray-600 space-y-2">
+                <p>1. Nhấn nút <span className="font-bold">⋮</span> (góc trên phải)</p>
+                <p>2. Chọn <span className="font-bold">&quot;Mở bằng Chrome&quot;</span></p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );
