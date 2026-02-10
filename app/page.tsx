@@ -17,8 +17,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Track click count - sessionStorage is per-tab:
-  // reload keeps count, new tab/close tab resets
+  // Track click count - localStorage persists across app switches
   const [clickCount, setClickCount] = useState(0);
   const [isInAppBrowser, setIsInAppBrowser] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -50,8 +49,8 @@ export default function HomePage() {
       }
     }
 
-    // Restore click count from sessionStorage (per-tab)
-    const saved = sessionStorage.getItem('videoClickCount');
+    // Restore click count from localStorage
+    const saved = localStorage.getItem('videoClickCount');
     if (saved) {
       setClickCount(parseInt(saved));
     }
@@ -90,18 +89,18 @@ export default function HomePage() {
       if (clickCount === 0) {
         openLink('tiktok');
         setClickCount(1);
-        sessionStorage.setItem('videoClickCount', '1');
+        localStorage.setItem('videoClickCount', '1');
       } else if (clickCount === 1) {
         openLink('shopee');
         setClickCount(2);
-        sessionStorage.setItem('videoClickCount', '2');
+        localStorage.setItem('videoClickCount', '2');
       }
     } else {
       // PC logic: Click 1 -> TikTok, Click 2+ -> Allow play (no Shopee)
       if (clickCount === 0) {
         openLink('tiktok');
         setClickCount(1);
-        sessionStorage.setItem('videoClickCount', '1');
+        localStorage.setItem('videoClickCount', '1');
       }
     }
   };
