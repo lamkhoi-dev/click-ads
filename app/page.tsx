@@ -20,6 +20,7 @@ export default function HomePage() {
   // Track click count - persisted in localStorage
   // Resets only when video was already unlocked (all clicks completed)
   const [clickCount, setClickCount] = useState(0);
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false);
 
   useEffect(() => {
     // Detect mobile
@@ -29,6 +30,10 @@ export default function HomePage() {
     
     checkMobile();
     window.addEventListener('resize', checkMobile);
+
+    // Detect Facebook/Instagram/Zalo/Line in-app browsers
+    const ua = navigator.userAgent || '';
+    setIsInAppBrowser(/FBAN|FBAV|FB_IAB|Instagram|Line\/|Zalo/i.test(ua));
 
     // Load click count from localStorage
     const saved = localStorage.getItem('videoClickCount');
@@ -64,35 +69,39 @@ export default function HomePage() {
     }
   };
 
+  // Open link - bypasses Facebook/Instagram in-app browser restrictions
+  const openLink = (type: 'tiktok' | 'shopee') => {
+    if (isInAppBrowser) {
+      // In-app browser: navigate to same-domain redirect page
+      // This bypasses the "trying to open another app" warning
+      window.location.href = `/api/go?type=${type}`;
+    } else {
+      // Normal browser: open in new tab
+      const url = type === 'tiktok' ? content!.tiktokLink : content!.shopeeLink;
+      window.open(url, '_blank');
+    }
+  };
+
   const handleVideoClick = () => {
     if (!content) return;
 
     if (isMobile) {
       // Mobile logic: Click 1 -> TikTok, Click 2 -> Shopee, Click 3+ -> Allow play
       if (clickCount === 0) {
-        // First click -> redirect to TikTok
-        window.open(content.tiktokLink, '_blank');
+        openLink('tiktok');
         setClickCount(1);
         localStorage.setItem('videoClickCount', '1');
       } else if (clickCount === 1) {
-        // Second click -> redirect to Shopee
-        window.open(content.shopeeLink, '_blank');
+        openLink('shopee');
         setClickCount(2);
         localStorage.setItem('videoClickCount', '2');
-      } else {
-        // Third click and beyond -> Allow video to play (do nothing, remove overlay)
-        // The overlay will not show anymore
       }
     } else {
       // PC logic: Click 1 -> TikTok, Click 2+ -> Allow play (no Shopee)
       if (clickCount === 0) {
-        // First click -> redirect to TikTok
-        window.open(content.tiktokLink, '_blank');
+        openLink('tiktok');
         setClickCount(1);
         localStorage.setItem('videoClickCount', '1');
-      } else {
-        // Second click and beyond -> Allow video to play
-        // The overlay will not show anymore
       }
     }
   };
