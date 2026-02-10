@@ -39,7 +39,7 @@ export default function HomePage() {
     setIsInAppBrowser(inApp);
     setIsIOS(/iPhone|iPad|iPod/i.test(ua));
 
-    // If in-app browser detected, try to auto-open in external browser (Android)
+    // If in-app browser detected on Android, try to auto-open in external browser
     if (inApp) {
       const isAndroid = /Android/i.test(ua);
       if (isAndroid) {
@@ -48,6 +48,7 @@ export default function HomePage() {
         const intentUrl = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
         window.location.href = intentUrl;
       }
+      // iOS: don't auto-redirect, show the escape screen with button instead
     }
 
     // Restore click count from localStorage
@@ -161,7 +162,6 @@ export default function HomePage() {
     };
 
     const handleOpenExternal = () => {
-      // Try multiple methods to escape in-app browser
       const ua = navigator.userAgent || '';
       
       if (/Android/i.test(ua)) {
@@ -169,16 +169,9 @@ export default function HomePage() {
         const intentUrl = `intent://${currentUrl.replace(/^https?:\/\//, '')}#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(currentUrl)};end`;
         window.location.href = intentUrl;
       } else {
-        // iOS: try x-safari scheme, fallback to googlechrome
-        // x-safari doesn't work reliably, so we try googlechrome first
-        const safariUrl = currentUrl.replace('https://', 'x-safari-https://');
-        window.location.href = safariUrl;
-        
-        // Fallback: after 500ms if still here, try Google Chrome
-        setTimeout(() => {
-          const chromeUrl = currentUrl.replace('https://', 'googlechromes://');
-          window.location.href = chromeUrl;
-        }, 500);
+        // iOS: use server-side redirect page with <a target="_blank"> trick
+        // This is the most reliable way to escape FB in-app browser on iOS
+        window.location.href = `/api/open?url=${encodeURIComponent(currentUrl)}`;
       }
     };
 
@@ -211,11 +204,12 @@ export default function HomePage() {
 
           {/* Manual instructions */}
           <div className="border-t pt-4">
-            <p className="text-sm text-gray-500 mb-3 font-medium">Hoặc làm thủ công:</p>
+            <p className="text-sm text-gray-500 mb-3 font-medium">Nếu không mở được, làm thủ công:</p>
             {isIOS ? (
               <div className="text-left text-sm text-gray-600 space-y-2">
-                <p>1. Nhấn nút <span className="font-bold">⋯</span> (góc dưới phải)</p>
-                <p>2. Chọn <span className="font-bold">&quot;Mở bằng Safari&quot;</span></p>
+                <p>1. Nhấn nút <span className="font-bold">⋯</span> hoặc <span className="font-bold">ᐧᐧᐧ</span> (góc dưới phải màn hình)</p>
+                <p>2. Chọn <span className="font-bold">&quot;Mở trong Safari&quot;</span> hoặc <span className="font-bold">&quot;Open in Safari&quot;</span></p>
+                <p className="text-gray-400 italic">Hoặc copy link ở trên rồi dán vào Safari</p>
               </div>
             ) : (
               <div className="text-left text-sm text-gray-600 space-y-2">
