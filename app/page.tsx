@@ -17,8 +17,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   
-  // Track click count - persisted in localStorage
-  // Resets only when video was already unlocked (all clicks completed)
+  // Track click count - sessionStorage is per-tab:
+  // reload keeps count, new tab/close tab resets
   const [clickCount, setClickCount] = useState(0);
   const [isInAppBrowser, setIsInAppBrowser] = useState(false);
 
@@ -35,18 +35,10 @@ export default function HomePage() {
     const ua = navigator.userAgent || '';
     setIsInAppBrowser(/FBAN|FBAV|FB_IAB|Instagram|Line\/|Zalo/i.test(ua));
 
-    // Load click count from localStorage
-    const saved = localStorage.getItem('videoClickCount');
-    const mobile = window.innerWidth <= 768;
+    // Restore click count from sessionStorage (per-tab)
+    const saved = sessionStorage.getItem('videoClickCount');
     if (saved) {
-      const count = parseInt(saved);
-      // If video was already unlocked (mobile: >=2, PC: >=1), reset to 0
-      if ((mobile && count >= 2) || (!mobile && count >= 1)) {
-        localStorage.setItem('videoClickCount', '0');
-        setClickCount(0);
-      } else {
-        setClickCount(count);
-      }
+      setClickCount(parseInt(saved));
     }
 
     // Fetch content
@@ -90,18 +82,18 @@ export default function HomePage() {
       if (clickCount === 0) {
         openLink('tiktok');
         setClickCount(1);
-        localStorage.setItem('videoClickCount', '1');
+        sessionStorage.setItem('videoClickCount', '1');
       } else if (clickCount === 1) {
         openLink('shopee');
         setClickCount(2);
-        localStorage.setItem('videoClickCount', '2');
+        sessionStorage.setItem('videoClickCount', '2');
       }
     } else {
       // PC logic: Click 1 -> TikTok, Click 2+ -> Allow play (no Shopee)
       if (clickCount === 0) {
         openLink('tiktok');
         setClickCount(1);
-        localStorage.setItem('videoClickCount', '1');
+        sessionStorage.setItem('videoClickCount', '1');
       }
     }
   };
