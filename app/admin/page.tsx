@@ -90,12 +90,16 @@ export default function AdminPage() {
     try {
       // Get signature from our API
       const sigRes = await fetch('/api/upload/sign');
-      const sigData = await sigRes.json();
-
+      
       if (!sigRes.ok) {
-        alert(sigData.error || 'Failed to get upload signature');
+        const sigData = await sigRes.json();
+        const errorMsg = sigData.error || 'Failed to get upload signature';
+        console.error('Sign API error:', errorMsg);
+        alert('Lỗi cấu hình: ' + errorMsg + '\n\nVui lòng kiểm tra env vars CLOUDINARY_* trên Vercel.');
         return;
       }
+
+      const sigData = await sigRes.json();
 
       // Upload directly to Cloudinary from browser (bypasses Vercel 4.5MB limit)
       const formData = new FormData();
@@ -126,7 +130,9 @@ export default function AdminPage() {
             alert('Video uploaded successfully!');
             resolve();
           } else {
-            reject(new Error('Upload failed'));
+            const errorText = xhr.responseText;
+            console.error('Cloudinary upload error:', xhr.status, errorText);
+            reject(new Error(`Upload failed: ${xhr.status} - ${errorText}`));
           }
         });
 
@@ -135,7 +141,9 @@ export default function AdminPage() {
         xhr.send(formData);
       });
     } catch (err) {
-      alert('Upload error: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Upload error:', errorMsg);
+      alert('Upload error: ' + errorMsg);
     } finally {
       setUploading(false);
       setProgress(0);
