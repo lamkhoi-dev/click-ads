@@ -141,6 +141,9 @@ export default function AdminPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Bạn có chắc muốn xóa trang này?')) return;
 
+    // Find the page to get video URLs for deletion
+    const pageToDelete = pages.find(p => p.id === id);
+
     try {
       const res = await fetch('/api/pages', {
         method: 'DELETE',
@@ -149,6 +152,36 @@ export default function AdminPage() {
       });
 
       if (res.ok) {
+        // Delete videos from Cloudinary after successful page deletion
+        if (pageToDelete) {
+          const deletePromises: Promise<any>[] = [];
+          
+          if (pageToDelete.video1Url && pageToDelete.video1Url.includes('cloudinary.com')) {
+            deletePromises.push(
+              fetch('/api/upload/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videoUrl: pageToDelete.video1Url }),
+              }).catch(err => console.warn('Failed to delete video1:', err))
+            );
+          }
+          
+          if (pageToDelete.video2Url && pageToDelete.video2Url.includes('cloudinary.com')) {
+            deletePromises.push(
+              fetch('/api/upload/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ videoUrl: pageToDelete.video2Url }),
+              }).catch(err => console.warn('Failed to delete video2:', err))
+            );
+          }
+          
+          // Delete videos in parallel (non-blocking)
+          Promise.all(deletePromises).then(() => {
+            console.log('Videos deleted from Cloudinary');
+          });
+        }
+        
         alert('Đã xóa!');
         fetchPages();
       } else {
@@ -184,6 +217,9 @@ export default function AdminPage() {
     const setProgress = videoNumber === 1 ? setUploadProgress1 : setUploadProgress2;
     setUploading(true);
     setProgress(0);
+
+    // Save old video URL to delete after successful upload
+    const oldVideoUrl = videoNumber === 1 ? pageForm.video1Url : pageForm.video2Url;
 
     try {
       // Get signature from our API
@@ -225,7 +261,6 @@ export default function AdminPage() {
             } else {
               setPageForm(prev => ({ ...prev, video2Url: result.secure_url }));
             }
-            alert('Video uploaded successfully!');
             resolve();
           } else {
             const errorText = xhr.responseText;
@@ -238,6 +273,27 @@ export default function AdminPage() {
         xhr.open('POST', `https://api.cloudinary.com/v1_1/${sigData.cloudName}/video/upload`);
         xhr.send(formData);
       });
+
+      // Delete old video from Cloudinary to save storage
+      if (oldVideoUrl && oldVideoUrl.includes('cloudinary.com')) {
+        try {
+          const deleteRes = await fetch('/api/upload/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoUrl: oldVideoUrl }),
+          });
+
+          if (deleteRes.ok) {
+            console.log('Old video deleted successfully');
+          } else {
+            console.warn('Failed to delete old video (non-critical)');
+          }
+        } catch (delErr) {
+          console.warn('Error deleting old video (non-critical):', delErr);
+        }
+      }
+
+      alert('Video uploaded successfully!');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
       console.error('Upload error:', errorMsg);
