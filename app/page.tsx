@@ -32,9 +32,10 @@ export default function HomePage() {
     checkMobile();
     window.addEventListener('resize', checkMobile);
 
-    // Detect Facebook/Instagram/Zalo/Line in-app browsers
+    // Detect Facebook/Instagram/Zalo/Line in-app browsers (mobile only)
     const ua = navigator.userAgent || '';
-    const inApp = /FBAN|FBAV|FB_IAB|Instagram|Line\/|Zalo/i.test(ua);
+    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    const inApp = isMobileDevice && /FBAN|FBAV|FB_IAB|Instagram|Line\/|Zalo/i.test(ua);
     setIsInAppBrowser(inApp);
     setIsIOS(/iPhone|iPad|iPod/i.test(ua));
 
