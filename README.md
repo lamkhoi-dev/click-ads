@@ -1,4 +1,4 @@
-# 🎯 Click Ads - Affiliate Video Website
+# 🎯 Click Ads - Affiliate Video Websitee
 
 Website affiliate thông minh với video blur và redirect logic tự động cho TikTok Shop và Shopee.
 
