@@ -227,4 +227,4 @@ Reset click count (for testing):
 
 ## 📄 License
 
-LamKhoi 
+LamKhoi
