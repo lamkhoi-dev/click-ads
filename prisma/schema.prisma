@@ -11,14 +11,16 @@ datasource db {
   directUrl = env("DATABASE_URL") // uses a direct connection
 }
 
-model Content {
+model Page {
   id          String   @id @default(cuid())
+  slug        String   @unique // URL path like "1", "2", "hot-trend"
   title       String
   description String   @db.Text
   video1Url   String
   video2Url   String
   tiktokLink  String
   shopeeLink  String
+  isActive    Boolean  @default(true) // Show/hide page
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

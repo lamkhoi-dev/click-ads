@@ -20,21 +20,37 @@ async function main() {
 
   console.log('✅ Admin user created:', admin.username);
 
-  // Optionally create sample content
-  const existingContent = await prisma.content.findFirst();
+  // Create sample pages
+  const existingPages = await prisma.page.count();
   
-  if (!existingContent) {
-    const sampleContent = await prisma.content.create({
+  if (existingPages === 0) {
+    const page1 = await prisma.page.create({
       data: {
-        title: 'Sample Video Content',
-        description: 'This is a sample content. Please update from admin panel.',
+        slug: '1',
+        title: 'Trang 1 - Video Hot',
+        description: 'Nội dung trang 1. Cập nhật từ admin panel.',
         video1Url: 'https://example.com/video1.mp4',
         video2Url: 'https://example.com/video2.mp4',
-        tiktokLink: 'https://vt.tiktok.com/example',
-        shopeeLink: 'https://s.shopee.vn/example',
+        tiktokLink: 'https://vt.tiktok.com/example1',
+        shopeeLink: 'https://s.shopee.vn/example1',
+        isActive: true,
       },
     });
-    console.log('✅ Sample content created:', sampleContent.id);
+
+    const page2 = await prisma.page.create({
+      data: {
+        slug: '2',
+        title: 'Trang 2 - Trending',
+        description: 'Nội dung trang 2. Cập nhật từ admin panel.',
+        video1Url: 'https://example.com/video3.mp4',
+        video2Url: 'https://example.com/video4.mp4',
+        tiktokLink: 'https://vt.tiktok.com/example2',
+        shopeeLink: 'https://s.shopee.vn/example2',
+        isActive: true,
+      },
+    });
+    
+    console.log('✅ Sample pages created:', page1.slug, page2.slug);
   }
 
   console.log('🎉 Database seeded successfully!');
