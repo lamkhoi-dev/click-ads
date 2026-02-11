@@ -22,7 +22,10 @@ export async function GET() {
       );
     }
 
-    const timestamp = Math.round(new Date().getTime() / 1000);
+    // Generate fresh timestamp (Unix timestamp in seconds)
+    const timestamp = Math.floor(Date.now() / 1000);
+    
+    console.log('Generating signature with timestamp:', timestamp, 'Date:', new Date(timestamp * 1000).toISOString());
 
     const signature = cloudinary.utils.api_sign_request(
       {
@@ -32,12 +35,21 @@ export async function GET() {
       process.env.CLOUDINARY_API_SECRET
     );
 
-    return NextResponse.json({
-      signature,
-      timestamp,
-      apiKey: process.env.CLOUDINARY_API_KEY,
-      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-    });
+    return NextResponse.json(
+      {
+        signature,
+        timestamp,
+        apiKey: process.env.CLOUDINARY_API_KEY,
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
   } catch (error) {
     console.error('Signing error:', error);
     return NextResponse.json(

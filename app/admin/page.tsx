@@ -222,8 +222,14 @@ export default function AdminPage() {
     const oldVideoUrl = videoNumber === 1 ? pageForm.video1Url : pageForm.video2Url;
 
     try {
-      // Get signature from our API
-      const sigRes = await fetch('/api/upload/sign');
+      // Get fresh signature from our API (no cache)
+      const sigRes = await fetch('/api/upload/sign', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+        },
+      });
       
       if (!sigRes.ok) {
         const sigData = await sigRes.json();
@@ -234,6 +240,7 @@ export default function AdminPage() {
       }
 
       const sigData = await sigRes.json();
+      console.log('Received signature with timestamp:', sigData.timestamp, 'Current time:', Math.floor(Date.now() / 1000));
 
       // Upload directly to Cloudinary from browser (bypasses Vercel 4.5MB limit)
       const formData = new FormData();
@@ -265,7 +272,24 @@ export default function AdminPage() {
           } else {
             const errorText = xhr.responseText;
             console.error('Cloudinary upload error:', xhr.status, errorText);
-            reject(new Error(`Upload failed: ${xhr.status} - ${errorText}`));
+            
+            // Parse error for better message
+            let errorMsg = `Upload failed: ${xhr.status}`;
+            try {
+              const errorData = JSON.parse(errorText);
+              if (errorData.error?.message) {
+                errorMsg = errorData.error.message;
+                
+                // Special handling for stale timestamp error
+                if (errorMsg.includes('Stale request') || errorMsg.includes('more than 1 hour ago')) {
+                  errorMsg = 'Timestamp cũ (quá 1 giờ). Vui lòng thử lại - hệ thống sẽ tạo signature mới.';
+                }
+              }
+            } catch (e) {
+              // Use default error message
+            }
+            
+            reject(new Error(errorMsg));
           }
         });
 
