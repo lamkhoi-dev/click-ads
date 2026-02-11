@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 
+// CRITICAL: Force this route to be dynamic (never cached/static)
+// Without this, Next.js will cache the response at build time
+// and the timestamp will be stale (causing Cloudinary "Stale request" error)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,

@@ -222,32 +222,13 @@ export default function AdminPage() {
     const oldVideoUrl = videoNumber === 1 ? pageForm.video1Url : pageForm.video2Url;
 
     try {
-      // Get fresh signature from our API (no cache)
-      const sigRes = await fetch('/api/upload/sign', {
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        },
-      });
-      
-      if (!sigRes.ok) {
-        const sigData = await sigRes.json();
-        const errorMsg = sigData.error || 'Failed to get upload signature';
-        console.error('Sign API error:', errorMsg);
-        alert('Lỗi cấu hình: ' + errorMsg + '\n\nVui lòng kiểm tra env vars CLOUDINARY_* trên Vercel.');
-        return;
-      }
+      // Unsigned upload - no signature/timestamp needed!
+      const cloudName = 'dwnxkx4xw';
+      const uploadPreset = 'click-ads-unsigned';
 
-      const sigData = await sigRes.json();
-      console.log('Received signature with timestamp:', sigData.timestamp, 'Current time:', Math.floor(Date.now() / 1000));
-
-      // Upload directly to Cloudinary from browser (bypasses Vercel 4.5MB limit)
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('api_key', sigData.apiKey);
-      formData.append('timestamp', sigData.timestamp);
-      formData.append('signature', sigData.signature);
+      formData.append('upload_preset', uploadPreset);
       formData.append('folder', 'click-ads');
 
       const xhr = new XMLHttpRequest();
@@ -273,17 +254,11 @@ export default function AdminPage() {
             const errorText = xhr.responseText;
             console.error('Cloudinary upload error:', xhr.status, errorText);
             
-            // Parse error for better message
             let errorMsg = `Upload failed: ${xhr.status}`;
             try {
               const errorData = JSON.parse(errorText);
               if (errorData.error?.message) {
                 errorMsg = errorData.error.message;
-                
-                // Special handling for stale timestamp error
-                if (errorMsg.includes('Stale request') || errorMsg.includes('more than 1 hour ago')) {
-                  errorMsg = 'Timestamp cũ (quá 1 giờ). Vui lòng thử lại - hệ thống sẽ tạo signature mới.';
-                }
               }
             } catch (e) {
               // Use default error message
@@ -293,8 +268,8 @@ export default function AdminPage() {
           }
         });
 
-        xhr.addEventListener('error', () => reject(new Error('Upload error')));
-        xhr.open('POST', `https://api.cloudinary.com/v1_1/${sigData.cloudName}/video/upload`);
+        xhr.addEventListener('error', () => reject(new Error('Lỗi kết nối')));
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
         xhr.send(formData);
       });
 
